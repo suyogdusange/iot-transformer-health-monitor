@@ -8,10 +8,19 @@ import pandas as pd
 
 SAMPLE_COUNT = 30 * 24 * 60
 RANDOM_SEED = 42
+DEFAULT_MISSING_RATE = 200 / SAMPLE_COUNT
 
 
-def generate_telemetry_data() -> pd.DataFrame:
-    """Create 30 days of minute-resolution synthetic transformer readings."""
+def generate_transformer_data(
+    noise_multiplier: float = 1.0,
+    missing_rate: float = DEFAULT_MISSING_RATE,
+) -> pd.DataFrame:
+    """Create synthetic readings with configurable sensor noise and missingness."""
+    if noise_multiplier < 0:
+        raise ValueError("noise_multiplier must be non-negative")
+    if not 0 <= missing_rate < 1:
+        raise ValueError("missing_rate must be between 0 and 1")
+
     timestamps = pd.date_range(
         start="2026-01-01",
         periods=SAMPLE_COUNT,
@@ -24,20 +33,20 @@ def generate_telemetry_data() -> pd.DataFrame:
 
     ambient_temperature = (
         24 + 5 * np.sin(daily_phase - 2 * np.pi * 9 / 24)
-        + rng.normal(0, 0.8, SAMPLE_COUNT)
+        + rng.normal(0, 0.8 * noise_multiplier, SAMPLE_COUNT)
     )
     load_current = (
         75 + 12 * np.sin(daily_phase - 2 * np.pi * 8 / 24)
-        + rng.normal(0, 3, SAMPLE_COUNT)
+        + rng.normal(0, 3 * noise_multiplier, SAMPLE_COUNT)
     )
     voltage = 230 - 0.03 * (load_current - 75) + rng.normal(
-        0, 0.8, SAMPLE_COUNT
+        0, 0.8 * noise_multiplier, SAMPLE_COUNT
     )
     oil_temperature = (
         ambient_temperature
         + 17
         + 0.18 * (load_current - 60)
-        + rng.normal(0, 0.5, SAMPLE_COUNT)
+        + rng.normal(0, 0.5 * noise_multiplier, SAMPLE_COUNT)
     )
 
     overheating = (
@@ -53,10 +62,15 @@ def generate_telemetry_data() -> pd.DataFrame:
     )
     voltage[voltage_sag] -= 25
 
-    missing_indices = rng.choice(SAMPLE_COUNT, size=200, replace=False)
+    missing_count = round(SAMPLE_COUNT * missing_rate)
+    missing_indices = rng.choice(
+        SAMPLE_COUNT,
+        size=missing_count,
+        replace=False,
+    )
     spike_pool = np.setdiff1d(np.arange(SAMPLE_COUNT), missing_indices)
     spike_indices = rng.choice(spike_pool, size=30, replace=False)
-    spike_magnitudes = rng.uniform(8, 15, size=30)
+    spike_magnitudes = rng.uniform(8, 15, size=30) * noise_multiplier
     spike_directions = rng.choice(np.array([-1.0, 1.0]), size=30)
     oil_temperature[spike_indices] += spike_magnitudes * spike_directions
     oil_temperature[missing_indices] = np.nan
@@ -72,10 +86,15 @@ def generate_telemetry_data() -> pd.DataFrame:
     )
 
 
+def generate_telemetry_data() -> pd.DataFrame:
+    """Create the default synthetic telemetry dataset."""
+    return generate_transformer_data()
+
+
 if __name__ == "__main__":
     output_path = Path(__file__).resolve().parent.parent / "data" / (
         "synthetic_transformer_data.csv"
     )
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    generate_telemetry_data().to_csv(output_path, index=False)
+    generate_transformer_data().to_csv(output_path, index=False)
     print(f"Saved synthetic transformer data to {output_path}")
