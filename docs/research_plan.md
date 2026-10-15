@@ -1,12 +1,2 @@
 # Research Plan
-
-This project develops a software-based IoT prototype for distribution
-transformer thermal-load monitoring using synthetic telemetry.
-
-It compares fixed threshold alarms with a rolling-window anomaly detector.
-
-The system monitors load current, voltage, oil temperature, ambient
-temperature, and temperature rise.
-
-It does not diagnose internal transformer faults and does not use real field
-transformer measurements.
+This project develops a software-based IoT prototype for distribution transformer thermal-load monitoring using synthetic telemetry. It compares fixed threshold alarms with a rolling-window anomaly detector. The system monitors load current, voltage, oil temperature, ambient temperature, and temperature rise. It does not diagnose internal transformer faults and does not use real field transformer measurements.
